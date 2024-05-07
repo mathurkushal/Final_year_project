@@ -1,0 +1,75 @@
+mykey = "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"
+myserpkey = "64a8290f02c2aaf4f6439a74856ce46b1249975aed56db4a0eb598097317b748"
+import os
+import tkinter as tk
+import speech_recognition as sr
+from gtts import gTTS
+from langchain.llms import OpenAI
+from langchain.agents import load_tools, AgentType, initialize_agent
+
+def listen_and_run_google_chain():
+    # Listen to the user's voice input
+    recognizer = sr.Recognizer()
+    with sr.Microphone(10) as source:
+        audio = recognizer.listen(source)
+
+    try:
+        # Recognize the speech input
+        query = recognizer.recognize_google(audio)
+        query_entry.delete(0, tk.END)
+        query_entry.insert(0, query)
+
+        # Run Google Chain with user's query
+        result = mygooglechain.run(query)
+
+        # Display the result in the Label widget
+        output_label.config(text=result)
+
+        # Convert the result to speech and play it
+        tts = gTTS(text=result, lang='en')
+        tts.save("output.mp3")
+        os.system("start output.mp3")
+    except sr.UnknownValueError:
+        print("Speech recognition could not understand audio")
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+
+window = tk.Tk()
+window.title("Voice-Powered Langchain Example")
+
+query_label = tk.Label(window, text="Your Query:")
+query_label.pack()
+query_entry = tk.Entry(window)
+query_entry.pack()
+
+output_label = tk.Label(window, text="", wraplength=400)
+output_label.pack()
+
+listen_button = tk.Button(window, text="Listen and Run Google Chain", command=listen_and_run_google_chain)
+listen_button.pack()
+
+menubar = tk.Menu(window)
+
+google_chain_menu = tk.Menu(menubar, tearoff=0)
+google_chain_menu.add_command(label="Run Google Chain", command=listen_and_run_google_chain)
+
+menubar.add_cascade(label="Google Chain", menu=google_chain_menu)
+
+window.config(menu=menubar)
+
+myllm = OpenAI(
+    model='text-davinci-003',
+    temperature=1,
+    openai_api_key=mykey
+)
+
+os.environ['SERPAPI_API_KEY'] = myserpkey
+myserptool = load_tools(tool_names=["serpapi"])
+mygooglechain = initialize_agent(
+    llm=myllm,
+    tools=myserptool,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True
+)
+
+window.mainloop()
